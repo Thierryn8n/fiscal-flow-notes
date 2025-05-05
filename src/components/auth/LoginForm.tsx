@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,27 +11,24 @@ const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Mock authentication for now
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // This is a placeholder for actual Supabase authentication
-      // In a real implementation, you would use Supabase auth here
-      if (email && password) {
-        // Mock successful login
-        localStorage.setItem('fiscalFlowToken', 'mock-token');
-        
-        toast({
-          title: 'Login efetuado com sucesso!',
-          description: 'Bem-vindo ao Fiscal Flow Notes.',
-        });
-        
-        navigate('/dashboard');
-      } else {
-        throw new Error('Por favor, preencha todos os campos.');
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Login efetuado com sucesso!',
+        description: 'Bem-vindo ao Fiscal Flow Notes.',
+      });
+      
+      navigate('/dashboard');
     } catch (error) {
       toast({
         title: 'Erro no login',
