@@ -5,6 +5,7 @@ import { Home, FileText, Printer, LogOut, Menu, PlusCircle, Package } from 'luci
 import Logo from './ui/Logo';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   Sidebar,
   SidebarContent,
