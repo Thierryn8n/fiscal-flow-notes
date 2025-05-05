@@ -1,7 +1,7 @@
 
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, FileText, Printer, LogOut, Menu } from 'lucide-react';
+import { Home, FileText, Printer, LogOut, Menu, PlusCircle, Package } from 'lucide-react';
 import Logo from './ui/Logo';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -72,25 +72,40 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen bg-gray-50">
-        <Sidebar>
+        <Sidebar className="border-r border-gray-200 shadow-md">
           <SidebarHeader>
-            <div className="flex items-center px-4 py-3">
+            <div className="flex items-center px-4 py-3 border-b border-gray-200">
               <Logo />
               <h1 className="ml-3 text-xl font-cascadia hidden md:block">Fiscal Flow Notes</h1>
             </div>
           </SidebarHeader>
           
           <SidebarContent>
-            <SidebarMenu>
+            <SidebarMenu className="p-2">
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild 
                   isActive={isActive('/dashboard')}
                   tooltip="Início"
+                  className="rounded-lg hover:bg-gray-100"
                 >
                   <Link to="/dashboard">
-                    <Home size={18} />
+                    <Home size={18} className="text-fiscal-green-600" />
                     <span>Início</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={isActive('/products')}
+                  tooltip="Produtos"
+                  className="rounded-lg hover:bg-gray-100"
+                >
+                  <Link to="/products">
+                    <Package size={18} className="text-fiscal-green-600" />
+                    <span>Produtos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -100,9 +115,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   asChild 
                   isActive={isActive('/notes/new')}
                   tooltip="Nova Nota"
+                  className="rounded-lg hover:bg-gray-100"
                 >
                   <Link to="/notes/new">
-                    <FileText size={18} />
+                    <PlusCircle size={18} className="text-fiscal-green-600" />
                     <span>Nova Nota</span>
                   </Link>
                 </SidebarMenuButton>
@@ -113,9 +129,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   asChild 
                   isActive={isActive('/print')}
                   tooltip="Impressão"
+                  className="rounded-lg hover:bg-gray-100"
                 >
                   <Link to="/print">
-                    <Printer size={18} />
+                    <Printer size={18} className="text-fiscal-green-600" />
                     <span>Impressão</span>
                   </Link>
                 </SidebarMenuButton>
@@ -123,14 +140,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </SidebarMenu>
           </SidebarContent>
           
-          <SidebarFooter>
-            <SidebarMenu>
+          <SidebarFooter className="border-t border-gray-200">
+            <SidebarMenu className="p-2">
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={handleLogout}
                   tooltip="Sair"
+                  className="rounded-lg hover:bg-gray-100"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={18} className="text-red-500" />
                   <span>Sair</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -140,12 +158,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         
         <div className="flex flex-col flex-1">
           <header className="bg-black text-white py-2 px-4 md:hidden flex items-center">
-            <SidebarTrigger className="mr-2" />
+            <SidebarTrigger className="mr-2 rounded-full hover:bg-gray-800 p-1 transition-colors" />
             <Logo />
             <h1 className="ml-3 text-xl font-cascadia">Fiscal Flow Notes</h1>
           </header>
           
-          <SidebarInset>
+          <SidebarInset className="rounded-tl-2xl">
             <main className="flex-grow container mx-auto py-6 px-4">
               {children}
             </main>

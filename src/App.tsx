@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import NewNote from "./pages/NewNote";
 import Print from "./pages/Print";
 import NotFound from "./pages/NotFound";
+import Products from './pages/Products';
 
 // Create auth context with proper typing
 export const AuthContext = createContext<{
@@ -110,6 +110,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <Print />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/products" 
+                element={
+                  <ProtectedRoute>
+                    <Products />
                   </ProtectedRoute>
                 } 
               />
