@@ -517,6 +517,8 @@ export type Database = {
           printed_by: string | null
           printer_id: string | null
           status: string
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           copies?: number | null
@@ -533,6 +535,8 @@ export type Database = {
           printed_by?: string | null
           printer_id?: string | null
           status: string
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           copies?: number | null
@@ -549,6 +553,8 @@ export type Database = {
           printed_by?: string | null
           printer_id?: string | null
           status?: string
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: []
       }
