@@ -1,108 +1,164 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 
-type PrintSettings = Database['public']['Tables']['print_settings']['Row'];
-type PrintSettingsInsert = Database['public']['Tables']['print_settings']['Insert'];
+// Tipos para as requisições de impressão
+export interface PrintRequest {
+  id?: string;
+  note_id: string;
+  note_data: any;
+  created_at?: string;
+  printed_at?: string;
+  status: 'pending' | 'printed' | 'error';
+  device_id: string;
+  created_by: string;
+}
 
-export class PrintService {
-  // Configurações de Impressão
-  static async getPrintSettings(userId: string) {
+/**
+ * Serviço para gerenciar impressão remota
+ */
+export const PrintService = {
+  /**
+   * Envia uma solicitação para impressão em outro dispositivo
+   */
+  async sendPrintRequest(noteId: string, noteData: any, userId: string | null): Promise<PrintRequest | null> {
     try {
+      // Verifica se o ID do usuário está definido
+      const safeUserId = userId || localStorage.getItem('default_user_id') || 'guest_user';
+      
+      // Armazena o ID do usuário padrão se não estiver definido
+      if (!userId) {
+        localStorage.setItem('default_user_id', safeUserId);
+      }
+      
+      // Gera um ID único para o dispositivo local se não existir
+      let deviceId = localStorage.getItem('device_id');
+      if (!deviceId) {
+        deviceId = `device_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        localStorage.setItem('device_id', deviceId);
+      }
+
+      // Cria a solicitação de impressão
+      const printRequest: PrintRequest = {
+        note_id: noteId,
+        note_data: noteData,
+        status: 'pending',
+        device_id: deviceId,
+        created_by: safeUserId,
+      };
+
+      // Insere na tabela de solicitações de impressão
       const { data, error } = await supabase
-        .from('print_settings')
-        .select('*')
-        .eq('created_by', userId)
+        .from('print_requests')
+        .insert(printRequest)
+        .select()
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (error) {
+        console.error('Erro ao enviar solicitação de impressão:', error);
+        return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Erro ao buscar configurações de impressão:', error);
+      console.error('Erro ao enviar solicitação de impressão:', error);
       return null;
     }
-  }
+  },
 
-  static async createPrintSettings(settings: PrintSettingsInsert) {
-    try {
-      const { data, error } = await supabase
-        .from('print_settings')
-        .insert(settings)
-        .select()
-        .single();
+  /**
+   * Verifica as solicitações de impressão pendentes para o dispositivo atual
+   */
+  async getPendingPrintRequests(): Promise<PrintRequest[]> {
+    // Obtém o ID do dispositivo local
+    const deviceId = localStorage.getItem('device_id');
+    if (!deviceId) return [];
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Erro ao criar configurações de impressão:', error);
-      throw error;
+    // Busca solicitações pendentes para este dispositivo
+    const { data, error } = await supabase
+      .from('print_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar solicitações de impressão:', error);
+      return [];
     }
-  }
 
-  static async updatePrintSettings(id: string, updates: Partial<PrintSettings>) {
-    try {
-      const { data, error } = await supabase
-        .from('print_settings')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
+    return data || [];
+  },
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Erro ao atualizar configurações de impressão:', error);
-      throw error;
+  /**
+   * Marca uma solicitação de impressão como impressa
+   */
+  async markAsPrinted(requestId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('print_requests')
+      .update({
+        status: 'printed',
+        printed_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Erro ao atualizar status da impressão:', error);
+      return false;
     }
-  }
 
-  // Funções para lidar com requests de impressão (já implementadas no notesService)
-  static async cleanupOldPrintRequests() {
-    try {
-      const { error } = await supabase
-        .rpc('cleanup_old_print_requests');
+    return true;
+  },
 
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Erro ao limpar requests antigos:', error);
-      throw error;
+  /**
+   * Marca uma solicitação de impressão como com erro
+   */
+  async markAsError(requestId: string, errorMessage: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('print_requests')
+      .update({
+        status: 'error',
+        error_message: errorMessage,
+      })
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Erro ao atualizar status da impressão:', error);
+      return false;
     }
-  }
 
-  // Função para obter impressoras disponíveis (simulado)
-  static async getAvailablePrinters() {
-    // Esta função seria implementada no lado do cliente/desktop
-    // Por agora, retornamos uma lista simulada
-    return [
-      'HP LaserJet Pro',
-      'Canon PIXMA',
-      'Epson EcoTank',
-      'Brother DCP',
-      'Impressora Padrão'
-    ];
-  }
+    return true;
+  },
 
-  // Função para testar impressora
-  static async testPrinter(printerName: string) {
-    try {
-      // Esta seria uma implementação real de teste de impressora
-      // Por agora, simulamos um teste bem-sucedido
-      console.log(`Testando impressora: ${printerName}`);
-      
-      // Simular delay de teste
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return { success: true, message: 'Impressora testada com sucesso!' };
-    } catch (error) {
-      console.error('Erro ao testar impressora:', error);
-      return { success: false, message: 'Erro ao testar impressora' };
-    }
+  /**
+   * Configura uma assinatura para ouvir novas solicitações de impressão
+   */
+  subscribeToNewPrintRequests(callback: (request: PrintRequest) => void) {
+    return supabase
+      .channel('public:print_requests')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'print_requests',
+          filter: `status=eq.pending` 
+        },
+        (payload) => {
+          callback(payload.new as PrintRequest);
+        }
+      )
+      .subscribe();
+  },
+  
+  /**
+   * Define um ID de usuário padrão para ser usado quando não houver usuário autenticado
+   */
+  setDefaultUserId(userId: string): void {
+    localStorage.setItem('default_user_id', userId);
+  },
+  
+  /**
+   * Obtém o ID do usuário atual (autenticado ou padrão)
+   */
+  getCurrentUserId(): string {
+    return localStorage.getItem('default_user_id') || 'guest_user';
   }
-}
+}; 
