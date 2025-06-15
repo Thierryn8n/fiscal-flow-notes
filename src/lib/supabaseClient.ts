@@ -1,6 +1,7 @@
+
 import { createClient } from '@supabase/supabase-js';
 // Importar a instância principal do supabase client
-import { supabase as mainSupabaseClient } from '../integrations/supabase/client';
+import { supabase as mainSupabaseClient, supabaseUrl } from '../integrations/supabase/client';
 
 // Obter as variáveis de ambiente
 // const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''; // Removido - usaremos mainSupabaseClient
@@ -149,14 +150,13 @@ export const checkAuthAndRLS = async () => {
 // });
 
 // Cliente Supabase com chave de serviço para ações administrativas
-const supabaseUrlFromIntegrations = import.meta.env.VITE_SUPABASE_URL || ''; // Necessário para supabaseAdmin
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
 if (!supabaseServiceKey) {
   console.error('ERRO CRÍTICO: VITE_SUPABASE_SERVICE_KEY não definido no .env');
 }
 
 // Configurações globais para o cliente Admin
-export const supabaseAdmin = createClient(supabaseUrlFromIntegrations, supabaseServiceKey, {
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false, // Não é necessário para cliente admin
     persistSession: false,   // Não é necessário para cliente admin
@@ -173,3 +173,4 @@ export const supabaseAdmin = createClient(supabaseUrlFromIntegrations, supabaseS
 });
 
 console.log('Cliente Supabase Admin inicializado com URL base:', siteUrl);
+
