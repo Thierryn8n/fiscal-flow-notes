@@ -6,7 +6,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import PrinterTabs from '@/components/PrinterTabs';
 import { PrintService, PrintRequest } from '@/services/LocalPrintService';
 import { isMobileDevice } from '@/utils/deviceUtils';
-import { getFiscalNoteById } from '@/services/notesService';
+import { NotesService } from '@/services/notesService';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Print: React.FC = () => {
@@ -43,7 +43,7 @@ const Print: React.FC = () => {
         try {
           setIsLoading(true);
           // Buscar a nota pelo ID
-          const note = await getFiscalNoteById(id);
+          const note = await NotesService.getNoteById(id, user.id);
           
           if (!note) {
             toast({

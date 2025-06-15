@@ -1,271 +1,310 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Layout } from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import Layout from '@/components/Layout';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 
 interface Customer {
   id: string;
   name: string;
+  email: string;
   phone: string;
-  email?: string;
   address: any;
+  created_at: string;
 }
 
 const CustomerManagement = () => {
   const { user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [newCustomer, setNewCustomer] = useState({
+  const [formData, setFormData] = useState({
     name: '',
-    phone: '',
     email: '',
+    phone: '',
     address: {
       street: '',
-      number: '',
-      neighborhood: '',
       city: '',
       state: '',
       zipCode: ''
     }
   });
 
-  const handleSaveCustomer = () => {
-    if (editingCustomer) {
-      toast({
-        title: "Cliente atualizado",
-        description: "Cliente atualizado com sucesso.",
-      });
-    } else {
-      toast({
-        title: "Cliente criado",
-        description: "Novo cliente criado com sucesso.",
-      });
+  useEffect(() => {
+    if (user) {
+      loadCustomers();
     }
-    setIsDialogOpen(false);
-    setEditingCustomer(null);
-    setNewCustomer({
-      name: '',
-      phone: '',
-      email: '',
-      address: {
-        street: '',
-        number: '',
-        neighborhood: '',
-        city: '',
-        state: '',
-        zipCode: ''
-      }
-    });
+  }, [user]);
+
+  const loadCustomers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('owner_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+      toast.error('Erro ao carregar clientes');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEditCustomer = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setNewCustomer({
-      name: customer.name,
-      phone: customer.phone,
-      email: customer.email || '',
-      address: customer.address || {
-        street: '',
-        number: '',
-        neighborhood: '',
-        city: '',
-        state: '',
-        zipCode: ''
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const customerData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        owner_id: user.id
+      };
+
+      if (editingCustomer) {
+        const { error } = await supabase
+          .from('customers')
+          .update(customerData)
+          .eq('id', editingCustomer.id);
+
+        if (error) throw error;
+        toast.success('Cliente atualizado com sucesso!');
+      } else {
+        const { error } = await supabase
+          .from('customers')
+          .insert(customerData);
+
+        if (error) throw error;
+        toast.success('Cliente criado com sucesso!');
       }
+
+      setIsDialogOpen(false);
+      resetForm();
+      loadCustomers();
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+      toast.error('Erro ao salvar cliente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setFormData({
+      name: customer.name,
+      email: customer.email || '',
+      phone: customer.phone,
+      address: customer.address || { street: '', city: '', state: '', zipCode: '' }
     });
     setIsDialogOpen(true);
   };
 
-  const handleDeleteCustomer = (customerId: string) => {
-    setCustomers(customers.filter(c => c.id !== customerId));
-    toast({
-      title: "Cliente excluído",
-      description: "Cliente excluído com sucesso.",
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Cliente excluído com sucesso!');
+      loadCustomers();
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast.error('Erro ao excluir cliente');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      address: {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: ''
+      }
     });
+    setEditingCustomer(null);
   };
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
+    customer.phone.includes(searchTerm) ||
+    (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
     <Layout>
       <div className="container mx-auto p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Gerenciamento de Clientes</h1>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Cliente
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Nome</Label>
-                      <Input
-                        id="name"
-                        value={newCustomer.name}
-                        onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Telefone</Label>
-                      <Input
-                        id="phone"
-                        value={newCustomer.phone}
-                        onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newCustomer.email}
-                      onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="street">Rua</Label>
-                      <Input
-                        id="street"
-                        value={newCustomer.address.street}
-                        onChange={(e) => setNewCustomer({
-                          ...newCustomer,
-                          address: {...newCustomer.address, street: e.target.value}
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="number">Número</Label>
-                      <Input
-                        id="number"
-                        value={newCustomer.address.number}
-                        onChange={(e) => setNewCustomer({
-                          ...newCustomer,
-                          address: {...newCustomer.address, number: e.target.value}
-                        })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="neighborhood">Bairro</Label>
-                      <Input
-                        id="neighborhood"
-                        value={newCustomer.address.neighborhood}
-                        onChange={(e) => setNewCustomer({
-                          ...newCustomer,
-                          address: {...newCustomer.address, neighborhood: e.target.value}
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="city">Cidade</Label>
-                      <Input
-                        id="city"
-                        value={newCustomer.address.city}
-                        onChange={(e) => setNewCustomer({
-                          ...newCustomer,
-                          address: {...newCustomer.address, city: e.target.value}
-                        })}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSaveCustomer}>
-                    {editingCustomer ? 'Atualizar' : 'Criar'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Lista de Clientes</CardTitle>
-                <div className="relative">
-                  <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Gerenciamento de Clientes</h1>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}
+                </DialogTitle>
+                <DialogDescription>
+                  Preencha os dados do cliente
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome</Label>
                   <Input
-                    placeholder="Buscar clientes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    required
                   />
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Nome</th>
-                      <th className="text-left p-2">Telefone</th>
-                      <th className="text-left p-2">Email</th>
-                      <th className="text-left p-2">Cidade</th>
-                      <th className="text-left p-2">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCustomers.map((customer) => (
-                      <tr key={customer.id} className="border-b">
-                        <td className="p-2">{customer.name}</td>
-                        <td className="p-2">{customer.phone}</td>
-                        <td className="p-2">{customer.email || '-'}</td>
-                        <td className="p-2">{customer.address?.city || '-'}</td>
-                        <td className="p-2">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditCustomer(customer)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteCustomer(customer.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                <div>
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="street">Endereço</Label>
+                  <Input
+                    id="street"
+                    placeholder="Rua"
+                    value={formData.address.street}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      address: { ...prev.address, street: e.target.value }
+                    }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Cidade"
+                    value={formData.address.city}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      address: { ...prev.address, city: e.target.value }
+                    }))}
+                  />
+                  <Input
+                    placeholder="Estado"
+                    value={formData.address.state}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      address: { ...prev.address, state: e.target.value }
+                    }))}
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? 'Salvando...' : editingCustomer ? 'Atualizar' : 'Criar'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Clientes</CardTitle>
+            <CardDescription>
+              Gerencie todos os seus clientes
+            </CardDescription>
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4" />
+              <Input
+                placeholder="Buscar clientes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-4">Carregando...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{customer.email || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(customer)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(customer.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

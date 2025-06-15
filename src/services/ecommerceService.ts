@@ -1,200 +1,222 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
+import type { Database } from '@/integrations/supabase/types';
 
-// Interfaces
-export interface EcommerceProduct extends Omit<Tables<'products'>, 'id' | 'created_at' | 'updated_at' | 'owner_id' | 'total'> {
-  id: string;
-  stock?: number;
-  inStock?: boolean;
-  slug?: string;
-  category?: string;
-  additionalImages?: { url: string }[];
-}
-
-export interface CartItem extends EcommerceProduct {
-  quantity: number;
-}
-
-export interface StoreInfo extends Omit<Tables<'ecommerce_settings'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
-  id: number;
-  name: string;
-  description?: string | null;
-  paymentMethods?: string[];
-  shippingMethods?: ShippingMethod[];
-  owner_id?: string | null;
-}
-
-export interface ShippingMethod {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-}
-
-export interface Category extends Omit<Tables<'ecommerce_categories'>, 'owner_id' | 'created_at' | 'updated_at' | 'image_url'> {
-  icon?: string | null;
-}
-
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'canceled' | 'returned';
-
-export interface NewOrderKanbanData {
-  product_id: string;
-  product_name: string;
-  customer_id: string;
-  customer_name: string;
-  seller_id: string;
-  seller_name: string;
-  status: OrderStatus;
-  notes?: string;
-  total_amount: number;
-}
-
-
-// Função para transformar os dados crus do Supabase para o tipo StoreInfo
-const transformToStoreInfo = (data: Tables<'ecommerce_settings'>): StoreInfo => {
-  return {
-    ...data,
-    name: data.store_name || 'Minha Loja',
-    description: data.store_description,
-    paymentMethods: data.footer_payment_methods?.split(',') || [],
-  };
-};
+type EcommerceSettings = Database['public']['Tables']['ecommerce_settings']['Row'];
+type EcommerceCategory = Database['public']['Tables']['ecommerce_categories']['Row'];
+type Product = Database['public']['Tables']['products']['Row'];
+type ProductReview = Database['public']['Tables']['product_reviews']['Row'];
 
 export class EcommerceService {
-  /**
-   * Busca uma lista paginada de produtos.
-   * @param page Número da página (padrão: 1)
-   * @param limit Limite de produtos por página (padrão: 10)
-   * @param searchQuery Termo de busca (opcional)
-   * @param category Categoria dos produtos (opcional)
-   */
-  public static async getProducts(
-    page: number = 1,
-    limit: number = 10,
-    searchQuery: string = '',
-    category: string = ''
-  ): Promise<{ data: EcommerceProduct[], count: number }> {
-    let query = supabase
-      .from('products')
-      .select('*', { count: 'exact' })
-      .range((page - 1) * limit, page * limit - 1);
+  // Configurações do E-commerce
+  static async getEcommerceSettings(ownerId?: string) {
+    try {
+      let query = supabase
+        .from('ecommerce_settings')
+        .select('*');
 
-    if (searchQuery) {
-      query = query.ilike('name', `%${searchQuery}%`);
-    }
-
-    if (category) {
-      query = query.eq('category', category);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error('Erro ao buscar produtos:', error);
-      throw new Error('Não foi possível carregar os produtos.');
-    }
-
-    return {
-      data: data as EcommerceProduct[],
-      count: count || 0,
-    };
-  }
-
-  /**
-   * Busca um produto pelo ID.
-   * @param productId ID do produto
-   */
-  public static async getProductById(productId: string): Promise<EcommerceProduct | null> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', productId)
-      .single();
-
-    if (error) {
-      console.error('Erro ao buscar produto:', error);
-      throw new Error('Não foi possível carregar o produto.');
-    }
-
-    return data as EcommerceProduct | null;
-  }
-
-  /**
-   * Busca todas as categorias de produtos.
-   */
-  public static async getCategories(): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('ecommerce_categories')
-      .select('*');
-
-    if (error) {
-      console.error('Erro ao buscar categorias:', error);
-      throw new Error('Não foi possível carregar as categorias.');
-    }
-
-    return data as Category[];
-  }
-
-  /**
-   * Busca as informações da loja, como nome, logo, etc.
-   * Utiliza cache em localStorage para evitar requisições repetidas.
-   */
-  public static async getStoreInfo(forceRefresh = false): Promise<StoreInfo> {
-    const cacheKey = 'fiscal_flow_store_info';
-    
-    if (!forceRefresh) {
-      const cachedData = localStorage.getItem(cacheKey);
-      if (cachedData) {
-        try {
-          const parsedData = JSON.parse(cachedData);
-          console.log('Carregando StoreInfo do cache');
-          return transformToStoreInfo(parsedData);
-        } catch (e) {
-          console.error('Erro ao parsear StoreInfo do cache', e);
-          localStorage.removeItem(cacheKey);
-        }
+      if (ownerId) {
+        query = query.eq('owner_id', ownerId);
       }
-    }
 
-    console.log('Buscando StoreInfo do Supabase...');
-    const { data: settings, error } = await supabase
-      .from('ecommerce_settings')
-      .select('*')
-      .limit(1)
-      .single();
-
-    if (error) {
-      console.error('Erro ao buscar configurações da loja:', error);
-      throw new Error('Não foi possível carregar as informações da loja.');
+      const { data, error } = await query.single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar configurações do e-commerce:', error);
+      return null;
     }
-    
-    if (settings) {
-      localStorage.setItem(cacheKey, JSON.stringify(settings));
-      return transformToStoreInfo(settings);
-    }
-
-    // Retornar um fallback caso não haja configurações
-    return transformToStoreInfo({
-      id: 0,
-      store_name: 'ToolPart',
-      store_description: 'Sua loja de ferramentas',
-      // ... outros valores padrão
-    } as Tables<'ecommerce_settings'>);
   }
 
-  /**
-   * Cria um novo pedido no quadro Kanban.
-   */
-  public static async createOrderInKanban(orderData: NewOrderKanbanData) {
-    const { data, error } = await supabase
-      .from('orders_kanban')
-      .insert([orderData]);
+  static async updateEcommerceSettings(settings: Partial<EcommerceSettings>) {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_settings')
+        .upsert(settings)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Erro ao criar pedido no Kanban:', error);
-      throw new Error('Não foi possível criar o pedido no Kanban.');
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao atualizar configurações do e-commerce:', error);
+      throw error;
     }
+  }
 
-    return data;
+  // Categorias
+  static async getCategories() {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar categorias:', error);
+      return [];
+    }
+  }
+
+  static async createCategory(category: Omit<EcommerceCategory, 'id' | 'created_at' | 'updated_at'>) {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_categories')
+        .insert(category)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar categoria:', error);
+      throw error;
+    }
+  }
+
+  static async updateCategory(id: string, updates: Partial<EcommerceCategory>) {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_categories')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao atualizar categoria:', error);
+      throw error;
+    }
+  }
+
+  static async deleteCategory(id: string) {
+    try {
+      const { error } = await supabase
+        .from('ecommerce_categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar categoria:', error);
+      throw error;
+    }
+  }
+
+  // Produtos para E-commerce
+  static async getProductsForEcommerce(page = 1, limit = 20, searchTerm?: string, categoryId?: string) {
+    try {
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit - 1;
+      
+      let query = supabase
+        .from('products')
+        .select('*, ecommerce_categories(name)', { count: 'exact' })
+        .range(startIndex, endIndex);
+
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%`);
+      }
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      const { data, error, count } = await query;
+      
+      if (error) throw error;
+      return { data: data || [], count: count || 0 };
+    } catch (error) {
+      console.error('Erro ao buscar produtos para e-commerce:', error);
+      return { data: [], count: 0 };
+    }
+  }
+
+  // Reviews de Produtos
+  static async getProductReviews(productId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('product_reviews')
+        .select('*')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar reviews do produto:', error);
+      return [];
+    }
+  }
+
+  static async createProductReview(review: Omit<ProductReview, 'id' | 'created_at' | 'updated_at'>) {
+    try {
+      const { data, error } = await supabase
+        .from('product_reviews')
+        .insert(review)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar review:', error);
+      throw error;
+    }
+  }
+
+  // Temas do E-commerce
+  static async getEcommerceThemes() {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_themes')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar temas:', error);
+      return [];
+    }
+  }
+
+  // Estilos de Cards de Produtos
+  static async getProductCardStyles(settingsId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_product_card_styles')
+        .select('*')
+        .eq('settings_id', settingsId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar estilos de cards:', error);
+      return null;
+    }
+  }
+
+  static async updateProductCardStyles(styles: Partial<Database['public']['Tables']['ecommerce_product_card_styles']['Row']>) {
+    try {
+      const { data, error } = await supabase
+        .from('ecommerce_product_card_styles')
+        .upsert(styles)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao atualizar estilos de cards:', error);
+      throw error;
+    }
   }
 }

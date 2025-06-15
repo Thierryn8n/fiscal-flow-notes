@@ -1,16 +1,15 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getFiscalNoteById, updateNoteStatus } from '@/services/notesService';
+import { NotesService } from '@/services/notesService';
 import { FiscalNote } from '@/types/FiscalNote';
 import PrintableNote from '@/components/fiscal/PrintableNote';
 import { useReactToPrint } from 'react-to-print';
-import { ArrowLeft, Printer, Edit } from 'lucide-react';
+import { ArrowLeft, Printer, Save, Edit } from 'lucide-react';
 import { SelectedProduct } from '@/components/fiscal/ProductSelector';
-import { PaymentData } from '@/types/PaymentData';
+import { PaymentData } from '@/components/fiscal/PaymentForm';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -29,7 +28,7 @@ const ViewNote: React.FC = () => {
       
       try {
         setIsLoading(true);
-        const fetchedNote = await getFiscalNoteById(id);
+        const fetchedNote = await NotesService.getNoteById(id, user.id);
         
         if (fetchedNote) {
           setNote(fetchedNote);
@@ -56,6 +55,7 @@ const ViewNote: React.FC = () => {
     fetchNote();
   }, [id, user, toast, navigate]);
 
+  // Função de impressão
   const handlePrint = useReactToPrint({
     content: () => printableNoteRef.current,
     documentTitle: note ? `Orçamento ${note.noteNumber}` : 'Orçamento',
@@ -70,8 +70,9 @@ const ViewNote: React.FC = () => {
         description: 'O orçamento foi enviado para a impressora.',
       });
       
-      if (note?.id) {
-        updateNoteStatus(note.id, 'printed');
+      // Marcar como impressa após a impressão bem-sucedida
+      if (note?.id && user) {
+        NotesService.markAsPrinted(note.id, user.id);
       }
     }
   });
@@ -101,19 +102,14 @@ const ViewNote: React.FC = () => {
 
   // Converter os dados de pagamento para o formato esperado pelo PrintableNote
   const convertPaymentData = (notePaymentData: any): PaymentData => {
-    let method = notePaymentData.method;
-    if (method === 'transfer') {
-      method = 'bank_transfer';
-    }
-
     return {
       total: note ? note.totalValue : 0,
-      method: method as PaymentData['method'],
+      method: notePaymentData.method as PaymentData['method'],
       installments: notePaymentData.installments,
       otherDetails: notePaymentData.observation,
       // Valores calculados
       appliedFee: 0,
-      installmentValue: note && notePaymentData.installments ? note.totalValue / notePaymentData.installments : (note?.totalValue || 0),
+      installmentValue: note ? note.totalValue / notePaymentData.installments : 0,
       totalWithFees: note ? note.totalValue : 0
     };
   };
@@ -223,7 +219,7 @@ const ViewNote: React.FC = () => {
             date={note.date}
             products={printableProducts}
             customerData={note.customerData}
-            paymentData={printablePaymentData as any}
+            paymentData={printablePaymentData}
             totalValue={note.totalValue}
           />
         </div>
@@ -232,4 +228,4 @@ const ViewNote: React.FC = () => {
   );
 };
 
-export default ViewNote;
+export default ViewNote; 

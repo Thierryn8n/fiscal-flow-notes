@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { 
@@ -19,17 +18,14 @@ interface ShoppingCartProps {
 
 const ShoppingCartComponent: React.FC<ShoppingCartProps> = ({ className }) => {
   const { 
-    cartItems: cart, 
+    cart, 
     removeFromCart, 
-    updateCartItemQuantity: updateQuantity, 
-    getCartItemCount, 
-    getCartTotal, 
+    updateQuantity, 
+    totalItems, 
+    totalPrice, 
     isCartOpen, 
     setIsCartOpen 
   } = useCart();
-
-  const totalItems = getCartItemCount();
-  const totalPrice = getCartTotal();
 
   const formattedTotal = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -183,7 +179,7 @@ const ShoppingCartComponent: React.FC<ShoppingCartProps> = ({ className }) => {
                         {new Intl.NumberFormat('pt-BR', {
                           style: 'currency',
                           currency: 'BRL'
-                        }).format(item.price * item.quantity)}
+                        }).format(item.subtotal)}
                       </p>
                     </div>
                   </div>
@@ -255,4 +251,4 @@ const ShoppingCartComponent: React.FC<ShoppingCartProps> = ({ className }) => {
   );
 };
 
-export default ShoppingCartComponent;
+export default ShoppingCartComponent; 

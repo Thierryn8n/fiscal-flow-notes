@@ -3,10 +3,10 @@ import { useDropzone } from 'react-dropzone';
 import { Image, Loader2, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
-import { uploadFile } from '@/services/storageService';
+import { BucketType, uploadFile } from '@/services/storageService';
 
 interface FileUploaderProps {
-  bucketName: string;
+  bucketName: BucketType;
   onUploadComplete: (url: string) => void;
   accept?: Record<string, string[]>;
   maxSize?: number;
@@ -32,6 +32,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
+  // Efeito para iniciar o upload automaticamente quando um arquivo é selecionado
   useEffect(() => {
     if (file && !isUploading && !uploadSuccess) {
       handleUpload();
@@ -46,6 +47,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       const selectedFile = acceptedFiles[0];
       setFile(selectedFile);
       
+      // Cria uma URL para preview da imagem
       const objectUrl = URL.createObjectURL(selectedFile);
       setPreview(objectUrl);
     }
@@ -75,24 +77,54 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     setError(null);
     setUploadSuccess(false);
     
+    // Adiciona log sobre o bucket para o qual estamos fazendo upload
     console.log(`Iniciando upload para bucket: ${bucketName}`, {
       tipoArquivo: file.type,
       tamanhoArquivo: `${(file.size / 1024).toFixed(2)} KB`,
       nome: file.name
     });
     
-    const result = await uploadFile(file, bucketName);
-    
-    setIsUploading(false);
-
-    if (result.success && result.url) {
-      onUploadComplete(result.url);
-      setUploadSuccess(true);
-      console.log(`Upload bem-sucedido para ${bucketName}: ${result.url}`);
-    } else {
-      const errorMessage = result.error?.message || 'Erro ao fazer upload do arquivo';
-      console.error('Detalhes do erro:', result.error);
-      setError(`Falha no upload: ${errorMessage}`);
+    try {
+      const result = await uploadFile(file, bucketName, true);
+      
+      if (result.success && result.url) {
+        onUploadComplete(result.url);
+        setIsUploading(false);
+        setUploadSuccess(true);
+        console.log(`Upload bem-sucedido para ${bucketName}: ${result.url}`);
+      } else {
+        // Verifica se o erro é relacionado ao bucket já existir
+        const errorMessage = result.error?.message || result.error?.error_description || 
+                            JSON.stringify(result.error) || 'Erro ao fazer upload do arquivo';
+                            
+        // Se o erro contiver "already exists", provavelmente é sobre o bucket
+        if (typeof errorMessage === 'string' && errorMessage.includes('already exists')) {
+          console.log('Bucket já existe, isso não é um problema real.');
+          // Tentamos fazer o upload novamente, ignorando o erro do bucket
+          try {
+            const retryResult = await uploadFile(file, bucketName, true); // true para ignorar erro de bucket existente
+            
+            if (retryResult.success && retryResult.url) {
+              onUploadComplete(retryResult.url);
+              setIsUploading(false);
+              setUploadSuccess(true);
+              console.log(`Upload bem-sucedido na segunda tentativa: ${retryResult.url}`);
+              return;
+            }
+          } catch (retryError) {
+            console.error('Erro na segunda tentativa:', retryError);
+          }
+        }
+        
+        console.error('Detalhes do erro:', result.error);
+        setError(`Falha no upload: ${errorMessage}`);
+        setIsUploading(false);
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Erro desconhecido';
+      console.error('Exceção no upload:', err);
+      setError(`Erro no upload: ${errorMessage}`);
+      setIsUploading(false);
     }
   };
 
@@ -143,9 +175,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                 variant="destructive"
                 size="sm"
                 className="mt-2 w-full"
-                disabled={isUploading}
               >
-                {isUploading ? 'Enviando...' : 'Tentar novamente'}
+                Tentar novamente
               </Button>
             </div>
           )}
@@ -181,4 +212,4 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   );
 };
 
-export { FileUploader };
+export { FileUploader }; 
