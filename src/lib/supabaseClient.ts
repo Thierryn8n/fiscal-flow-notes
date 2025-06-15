@@ -3,15 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 // Importar a instância principal do supabase client
 import { supabase as mainSupabaseClient, supabaseUrl } from '../integrations/supabase/client';
 
-// Obter as variáveis de ambiente
-// const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''; // Removido - usaremos mainSupabaseClient
-// const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''; // Removido - usaremos mainSupabaseClient
 const siteUrl = window.location.origin; // URL base do site para redirecionamentos
-
-// Verificação de depuração
-// if (!supabaseUrl || !supabaseAnonKey) { // Removido
-// console.error('Variáveis de ambiente do Supabase não configuradas. Verifique VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
-// }
 
 // Usar a instância importada do cliente Supabase
 export const supabase = mainSupabaseClient;
@@ -100,77 +92,4 @@ export const checkAuthAndRLS = async () => {
   }
 };
 
-// Configurar eventos de autenticação para monitorar erros de token
-// supabase.auth.onAuthStateChange((event, session) => { // Comentado pois já existe em integrations/supabase/client.ts
-//   console.log(`Evento de autenticação (lib/supabaseClient): ${event} - ${new Date().toISOString()}`);
-  
-//   if (event === 'TOKEN_REFRESHED') {
-//     console.log('Token renovado automaticamente (lib/supabaseClient):', new Date().toISOString());
-//     console.log('Novo token válido até (lib/supabaseClient):', new Date(session?.expires_at ? session.expires_at * 1000 : 0).toISOString());
-//     console.log('ID do usuário no token (lib/supabaseClient):', session?.user?.id);
-//   } else if (event === 'SIGNED_OUT') {
-//     console.log('Usuário deslogado (lib/supabaseClient):', new Date().toISOString());
-//   } else if (event === 'PASSWORD_RECOVERY') {
-//     console.log('Solicitação de recuperação de senha processada (lib/supabaseClient):', new Date().toISOString());
-//     if (session?.user) {
-//       console.log('- Usuário (lib/supabaseClient):', session.user.email);
-//     }
-//   } else if (event === 'USER_UPDATED') {
-//     console.log('Dados do usuário atualizados (lib/supabaseClient):', new Date().toISOString());
-//     if (session?.user) {
-//       console.log('- Usuário (lib/supabaseClient):', session.user.email);
-//     }
-//   } else if (event === 'SIGNED_IN') {
-//     console.log('Usuário logado (lib/supabaseClient):', new Date().toISOString());
-//     if (session?.user) {
-//       console.log('- Email (lib/supabaseClient):', session.user.email);
-//       console.log('- ID (lib/supabaseClient):', session.user.id);
-//       console.log('- Role (lib/supabaseClient):', session.user?.app_metadata?.role || 'Não definido');
-//       console.log('- Token expira em (lib/supabaseClient):', new Date(session.expires_at ? session.expires_at * 1000 : 0).toISOString());
-//     }
-//   } else if (event === 'INITIAL_SESSION') {
-//     console.log('Sessão inicial carregada (lib/supabaseClient):', new Date().toISOString());
-//     console.log('Sessão presente (lib/supabaseClient):', !!session);
-//     if (session) {
-//       console.log('- ID do usuário (lib/supabaseClient):', session.user.id);
-//       console.log('- Token JWT presente (lib/supabaseClient):', !!session.access_token);
-//       console.log('- Token expira em (lib/supabaseClient):', new Date(session.expires_at ? session.expires_at * 1000 : 0).toISOString());
-//       // Verificação de sanidade do token
-//       const expiry = session.expires_at ? new Date(session.expires_at * 1000) : null;
-//       const now = new Date();
-//       if (expiry && expiry < now) {
-//         console.error('ALERTA (lib/supabaseClient): Token JWT já expirado!', {
-//           expiry: expiry.toISOString(),
-//           now: now.toISOString(),
-//           diff: (expiry.getTime() - now.getTime()) / 1000 / 60, // Diferença em minutos
-//         });
-//       }
-//     }
-//   }
-// });
-
-// Cliente Supabase com chave de serviço para ações administrativas
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
-if (!supabaseServiceKey) {
-  console.error('ERRO CRÍTICO: VITE_SUPABASE_SERVICE_KEY não definido no .env');
-}
-
-// Configurações globais para o cliente Admin
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false, // Não é necessário para cliente admin
-    persistSession: false,   // Não é necessário para cliente admin
-    // Definir o site URL como URL base para todos os e-mails
-    // Isso será acrescentado a todos os links em e-mails enviados
-    flowType: 'pkce', // Usar PKCE como método de autenticação
-  },
-  // Definir headers personalizados para requisições
-  global: {
-    headers: {
-      'x-application-name': 'Fiscal Flow Admin'
-    }
-  }
-});
-
-console.log('Cliente Supabase Admin inicializado com URL base:', siteUrl);
-
+console.log('Cliente Supabase inicializado com URL base:', siteUrl);
