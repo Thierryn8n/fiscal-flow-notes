@@ -101,14 +101,19 @@ const ViewNote: React.FC = () => {
 
   // Converter os dados de pagamento para o formato esperado pelo PrintableNote
   const convertPaymentData = (notePaymentData: any): PaymentData => {
+    let method = notePaymentData.method;
+    if (method === 'transfer') {
+      method = 'bank_transfer';
+    }
+
     return {
       total: note ? note.totalValue : 0,
-      method: notePaymentData.method as PaymentData['method'],
+      method: method as PaymentData['method'],
       installments: notePaymentData.installments,
       otherDetails: notePaymentData.observation,
       // Valores calculados
       appliedFee: 0,
-      installmentValue: note ? note.totalValue / notePaymentData.installments : 0,
+      installmentValue: note && notePaymentData.installments ? note.totalValue / notePaymentData.installments : (note?.totalValue || 0),
       totalWithFees: note ? note.totalValue : 0
     };
   };
@@ -218,7 +223,7 @@ const ViewNote: React.FC = () => {
             date={note.date}
             products={printableProducts}
             customerData={note.customerData}
-            paymentData={printablePaymentData}
+            paymentData={printablePaymentData as any}
             totalValue={note.totalValue}
           />
         </div>

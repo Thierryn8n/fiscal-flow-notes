@@ -50,7 +50,7 @@ const Wishlist: React.FC = () => {
 
   // Adicionar produto ao carrinho
   const handleAddToCart = (product: EcommerceProduct) => {
-    addToCart(product);
+    addToCart({ ...product, quantity: 1 });
     toast({
       title: 'Produto adicionado',
       description: `${product.name} foi adicionado ao carrinho`,
