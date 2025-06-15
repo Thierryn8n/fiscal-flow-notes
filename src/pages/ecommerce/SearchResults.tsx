@@ -193,7 +193,7 @@ const SearchResults: React.FC = () => {
                     <CardFooter className="p-4 pt-0 gap-2">
                       <Button
                         className="flex-1 bg-[var(--store-primary)] text-[var(--store-primary-foreground)]"
-                        onClick={() => addToCart(product, 1)}
+                        onClick={() => addToCart(product)}
                       >
                         <ShoppingCart size={18} className="mr-2" />
                         Adicionar
@@ -238,7 +238,7 @@ const SearchResults: React.FC = () => {
                         <CardFooter className="p-4 pt-0">
                           <Button
                             className="w-full bg-[var(--store-primary)] text-[var(--store-primary-foreground)]"
-                            onClick={() => addToCart(product, 1)}
+                            onClick={() => addToCart(product)}
                           >
                             <ShoppingCart size={18} className="mr-2" />
                             Adicionar
@@ -257,4 +257,4 @@ const SearchResults: React.FC = () => {
   );
 };
 
-export default SearchResults; 
+export default SearchResults;

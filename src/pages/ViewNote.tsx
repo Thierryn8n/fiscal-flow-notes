@@ -1,15 +1,16 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { NotesService } from '@/services/notesService';
+import { getFiscalNoteById, updateNoteStatus } from '@/services/notesService';
 import { FiscalNote } from '@/types/FiscalNote';
 import PrintableNote from '@/components/fiscal/PrintableNote';
 import { useReactToPrint } from 'react-to-print';
-import { ArrowLeft, Printer, Save, Edit } from 'lucide-react';
+import { ArrowLeft, Printer, Edit } from 'lucide-react';
 import { SelectedProduct } from '@/components/fiscal/ProductSelector';
-import { PaymentData } from '@/components/fiscal/PaymentForm';
+import { PaymentData } from '@/types/PaymentData';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -28,7 +29,7 @@ const ViewNote: React.FC = () => {
       
       try {
         setIsLoading(true);
-        const fetchedNote = await NotesService.getNoteById(id, user.id);
+        const fetchedNote = await getFiscalNoteById(id);
         
         if (fetchedNote) {
           setNote(fetchedNote);
@@ -55,7 +56,6 @@ const ViewNote: React.FC = () => {
     fetchNote();
   }, [id, user, toast, navigate]);
 
-  // Função de impressão
   const handlePrint = useReactToPrint({
     content: () => printableNoteRef.current,
     documentTitle: note ? `Orçamento ${note.noteNumber}` : 'Orçamento',
@@ -70,9 +70,8 @@ const ViewNote: React.FC = () => {
         description: 'O orçamento foi enviado para a impressora.',
       });
       
-      // Marcar como impressa após a impressão bem-sucedida
-      if (note?.id && user) {
-        NotesService.markAsPrinted(note.id, user.id);
+      if (note?.id) {
+        updateNoteStatus(note.id, 'printed');
       }
     }
   });
@@ -228,4 +227,4 @@ const ViewNote: React.FC = () => {
   );
 };
 
-export default ViewNote; 
+export default ViewNote;

@@ -131,15 +131,15 @@ const NotesManagement = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap = {
-      draft: { label: 'Rascunho', variant: 'secondary' as const },
-      issued: { label: 'Emitida', variant: 'default' as const },
-      printed: { label: 'Impressa', variant: 'success' as const },
-      canceled: { label: 'Cancelada', variant: 'destructive' as const }
+    const statusMap: { [key: string]: { label: string; variant: 'default' | 'secondary' | 'destructive'; className?: string } } = {
+      draft: { label: 'Rascunho', variant: 'secondary' },
+      issued: { label: 'Emitida', variant: 'default' },
+      printed: { label: 'Impressa', variant: 'default', className: 'bg-green-600 text-white hover:bg-green-700' },
+      canceled: { label: 'Cancelada', variant: 'destructive' }
     };
 
-    const statusInfo = statusMap[status as keyof typeof statusMap] || statusMap.draft;
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    const statusInfo = statusMap[status] || statusMap.draft;
+    return <Badge variant={statusInfo.variant} className={statusInfo.className}>{statusInfo.label}</Badge>;
   };
 
   const filteredNotes = notes.filter(note => {
