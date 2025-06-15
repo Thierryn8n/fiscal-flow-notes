@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Tipos
@@ -7,6 +8,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl?: string;
+  unit?: string;
 }
 
 interface CartContextData {
@@ -17,6 +19,8 @@ interface CartContextData {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemCount: () => number;
+  isCartOpen: boolean;
+  setIsCartOpen: (isOpen: boolean) => void;
 }
 
 // Contexto
@@ -41,6 +45,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedItems = localStorage.getItem('@FiscalFlow:cart');
     return storedItems ? JSON.parse(storedItems) : [];
   });
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Salva os itens do carrinho no localStorage sempre que houver alteração
   useEffect(() => {
@@ -103,9 +108,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         getCartTotal,
         getCartItemCount,
+        isCartOpen,
+        setIsCartOpen,
       }}
     >
       {children}
     </CartContext.Provider>
   );
-}; 
+};
