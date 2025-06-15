@@ -6,6 +6,19 @@ const siteUrl = window.location.origin; // URL base do site para redirecionament
 // Usar a instância importada do cliente Supabase
 export const supabase = mainSupabaseClient;
 
+const adminNotSupportedError = new Error("Admin operations should not be performed on the client-side for security reasons. Please use an edge function.");
+
+export const supabaseAdmin = {
+  auth: {
+    admin: {
+      listUsers: () => Promise.reject(adminNotSupportedError),
+      createUser: () => Promise.reject(adminNotSupportedError),
+      deleteUser: () => Promise.reject(adminNotSupportedError),
+      getUserById: () => Promise.reject(adminNotSupportedError),
+    },
+  },
+};
+
 console.log('Cliente Supabase inicializado com URL base:', siteUrl);
 
 // Função auxiliar para diagnosticar problemas de autenticação e RLS
