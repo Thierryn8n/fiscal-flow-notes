@@ -1,4 +1,3 @@
-
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import App from "@/App";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -7,7 +6,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardPage from "@/pages/Dashboard";
 import NotesManagement from "@/pages/NotesManagement";
 import ProductsSystemPage from "@/pages/ProductManagement";
-import CustomerManagement from "@/pages/CustomerManagement";
 
 // Importações do E-commerce
 import EcommerceLayout from "@/components/ecommerce/EcommerceLayout";
@@ -76,10 +74,6 @@ export const router = createBrowserRouter([
         path: "products-system", 
         element: <ProtectedRoute><ProductsSystemPage /></ProtectedRoute> 
       },
-      { 
-        path: "customers", 
-        element: <ProtectedRoute><CustomerManagement /></ProtectedRoute> 
-      },
 
       // Rotas do Painel do E-commerce (com autenticação)
       {
@@ -101,4 +95,4 @@ export const router = createBrowserRouter([
   // Rotas de Autenticação
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
-]);
+]); 
