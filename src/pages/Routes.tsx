@@ -1,11 +1,15 @@
+
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import App from "@/App";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Importações do Layout principal
 import DashboardPage from "@/pages/Dashboard";
+import IntegratedDashboard from "@/pages/IntegratedDashboard";
 import NotesManagement from "@/pages/NotesManagement";
 import ProductsSystemPage from "@/pages/ProductManagement";
+import CustomerManagement from "@/pages/CustomerManagement";
+import ConfiguracoesMelhoradas from "@/pages/ConfiguracoesMelhoradas";
 
 // Importações do E-commerce
 import EcommerceLayout from "@/components/ecommerce/EcommerceLayout";
@@ -67,12 +71,24 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute><DashboardPage /></ProtectedRoute> 
       },
       { 
+        path: "integrated-dashboard", 
+        element: <ProtectedRoute><IntegratedDashboard /></ProtectedRoute> 
+      },
+      { 
         path: "notes", 
         element: <ProtectedRoute><NotesManagement /></ProtectedRoute> 
       },
       { 
         path: "products-system", 
         element: <ProtectedRoute><ProductsSystemPage /></ProtectedRoute> 
+      },
+      { 
+        path: "customers", 
+        element: <ProtectedRoute><CustomerManagement /></ProtectedRoute> 
+      },
+      { 
+        path: "settings", 
+        element: <ProtectedRoute><ConfiguracoesMelhoradas /></ProtectedRoute> 
       },
 
       // Rotas do Painel do E-commerce (com autenticação)
